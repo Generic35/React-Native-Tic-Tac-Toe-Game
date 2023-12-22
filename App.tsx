@@ -1,12 +1,12 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { GameScreen } from './GameScreen';
-import { ScorecardScreen } from './ScorecardScreen';
+import { GameScreen } from './screens/GameScreen';
+import { ScorecardScreen } from './screens/ScorecardScreen';
 
 type RootStackParamList = {
   Game: undefined;
-  Scorecard: undefined;
+  Scorecard: { score: { X: number; O: number; draws: number } };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();

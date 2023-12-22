@@ -9,7 +9,7 @@ type Score = { X: number; O: number; draws: number };
 
 type RootStackParamList = {
   Game: undefined;
-  Scorecard: undefined;
+  Scorecard: { score: Score };
 };
 
 type GameScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Game'>;
@@ -39,24 +39,24 @@ export const GameScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     if (!isHumanTurn) {
-      const bestMove = findBestMove(board);
+      const bestMove = findBestMove();
       if (bestMove !== -1) {
         makeMove(bestMove, 'O');
       }
     }
   }, [board, isHumanTurn]);
 
-  const makeMove = (index: number, player: Player): void => {
+  const makeMove = (index: number, player: Player) => {
     if (board[index] || checkForWinner() || board.every(cell => cell !== null)) {
       return;
     }
-    const newBoard: Board = [...board];
+    const newBoard = [...board];
     newBoard[index] = player;
     setBoard(newBoard);
     setIsHumanTurn(!isHumanTurn);
   };
 
-  const onPressCell = (index: number): void => {
+  const onPressCell = (index: number) => {
     if (isHumanTurn) {
       makeMove(index, 'X');
     }
@@ -82,15 +82,13 @@ export const GameScreen: React.FC<Props> = ({ navigation }) => {
     return null;
   };
 
-  const findBestMove = (board: Board): number => {
-    const emptyIndices: number[] = board
-      .map((cell, index) => (cell === null ? index : null))
-      .filter(index => index !== null) as number[];
+  const findBestMove = (): number => {
+    const emptyIndices = board.map((cell, index) => cell === null ? index : null).filter(index => index !== null) as number[];
     if (emptyIndices.length === 0) return -1;
     return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
   };
 
-  const restartGame = (): void => {
+  const restartGame = () => {
     setBoard(Array(9).fill(null));
     setCurrentPlayer('X');
     setIsHumanTurn(true);
@@ -106,15 +104,16 @@ export const GameScreen: React.FC<Props> = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const goToScorecard = () => {
+    navigation.navigate('Scorecard', { score });
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.scoreboard}>
-        Score - X: {score.X} | O: {score.O} | Draws: {score.draws}
-      </Text>
       <View style={styles.board}>
         {board.map((_, index) => renderCell(index))}
       </View>
-      <Button title="Go to Scorecard" onPress={() => navigation.navigate('Scorecard')} />
+      <Button title="Go to Scorecard" onPress={goToScorecard} />
       <TouchableOpacity style={styles.button} onPress={restartGame}>
         <Text style={styles.buttonText}>Restart Game</Text>
       </TouchableOpacity>
@@ -128,11 +127,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
-  },
-  scoreboard: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
   },
   board: {
     width: 300,
@@ -162,5 +156,3 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
 });
-
-
