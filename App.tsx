@@ -1,117 +1,153 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+type Player = 'X' | 'O';
+type Cell = Player | null;
+type Board = Cell[];
+type Score = { X: number; O: number; draws: number };
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+const App: React.FC = () => {
+  const [board, setBoard] = useState<Board>(Array(9).fill(null));
+  const [currentPlayer, setCurrentPlayer] = useState<Player>('X');
+  const [isHumanTurn, setIsHumanTurn] = useState<boolean>(true);
+  const [score, setScore] = useState<Score>({ X: 0, O: 0, draws: 0 });
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  useEffect(() => {
+    const winner = checkForWinner();
+    if (winner) {
+      Alert.alert(`Player ${winner} wins!`);
+      setScore(prevScore => ({ ...prevScore, [winner]: prevScore[winner] + 1 }));
+      return;
+    }
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+    if (board.every(cell => cell !== null)) {
+      Alert.alert("It's a draw!");
+      setScore(prevScore => ({ ...prevScore, draws: prevScore.draws + 1 }));
+      return;
+    }
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+    if (!isHumanTurn) {
+      const bestMove = findBestMove(board);
+      if (bestMove !== -1) {
+        makeMove(bestMove, 'O');
+      }
+    }
+  }, [board, isHumanTurn]);
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const makeMove = (index: number, player: Player): void => {
+    if (board[index] || checkForWinner() || board.every(cell => cell !== null)) {
+      return;
+    }
+    const newBoard: Board = [...board];
+    newBoard[index] = player;
+    setBoard(newBoard);
+    setIsHumanTurn(!isHumanTurn);
+  };
+
+  const onPressCell = (index: number): void => {
+    if (isHumanTurn) {
+      makeMove(index, 'X');
+    }
+  };
+
+  const checkForWinner = (): Player | null => {
+    const lines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+    ];
+    for (let i = 0; i < lines.length; i++) {
+      const [a, b, c] = lines[i];
+      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+        return board[a];
+      }
+    }
+    return null;
+  };
+
+  const findBestMove = (board: Board): number => {
+    const emptyIndices: number[] = board
+      .map((cell, index) => (cell === null ? index : null))
+      .filter(index => index !== null) as number[];
+    if (emptyIndices.length === 0) return -1;
+    return emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+  };
+
+  const restartGame = (): void => {
+    setBoard(Array(9).fill(null));
+    setCurrentPlayer('X');
+    setIsHumanTurn(true);
+  };
+
+  const renderCell = (index: number) => {
+    return (
+      <TouchableOpacity
+        key={index}
+        style={styles.cell}
+        onPress={() => onPressCell(index)}
+      >
+        <Text style={styles.cellText}>{board[index]}</Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <Text style={styles.scoreboard}>
+        Score - X: {score.X} | O: {score.O} | Draws: {score.draws}
+      </Text>
+      <View style={styles.board}>
+        {board.map((_, index) => renderCell(index))}
+      </View>
+      <TouchableOpacity style={styles.button} onPress={restartGame}>
+        <Text style={styles.buttonText}>Restart Game</Text>
+      </TouchableOpacity>
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  scoreboard: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  board: {
+    width: 300,
+    height: 300,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 20,
   },
-  highlight: {
-    fontWeight: '700',
+  cell: {
+    width: '33.333%',
+    height: '33.333%',
+    borderWidth: 1,
+    borderColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cellText: {
+    fontSize: 40,
+  },
+  button: {
+    backgroundColor: 'blue',
+    padding: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 20,
   },
 });
 
